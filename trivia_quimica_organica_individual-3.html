@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>¡Trivia! Química Orgánica</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: sans-serif; background: #0a0f1e; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 20px; }
+#app { width: 100%; max-width: 720px; }
+.btn {
+  border: none; cursor: pointer; border-radius: 8px; font-weight: 600;
+  font-size: 15px; padding: 12px 24px; transition: transform 0.1s;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: #1a6fd4; color: #fff; }
+.btn-danger { background: #c0392b; color: #fff; }
+.btn-restart { background: #7c3aed; color: #fff; }
+
+#startScreen {
+  text-align: center; padding: 2rem 1.5rem; min-height: 580px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+  border-radius: 12px;
+}
+#startScreen h1 { color: #facc15; font-size: 34px; margin-bottom: 6px; letter-spacing: 0.02em; }
+#startScreen .subtitle { color: #93c5fd; font-size: 14px; margin-bottom: 28px; }
+.player-input-wrap { display: flex; flex-direction: column; gap: 6px; width: 100%; max-width: 320px; margin-bottom: 18px; }
+.player-input-wrap label { color: #e2e8f0; font-size: 13px; font-weight: 600; text-align: left; }
+.player-input-wrap input {
+  width: 100%; padding: 10px 14px; border-radius: 8px; border: 2px solid #334155;
+  background: #1e293b; color: #f1f5f9; font-size: 15px; outline: none;
+}
+.player-input-wrap input:focus { border-color: #facc15; }
+.error-msg { color: #f87171; font-size: 13px; min-height: 20px; margin-bottom: 8px; }
+
+#gameScreen { padding: 1rem; background: #0f172a; border-radius: 12px; }
+.topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 14px; gap: 8px; flex-wrap: wrap;
+}
+.player-info { color: #facc15; font-size: 15px; font-weight: 700; }
+.score-box { background: #1e293b; border-radius: 8px; padding: 6px 16px; color: #facc15; font-size: 20px; font-weight: 800; }
+.ctrl-btns { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.ctrl-btns .btn { font-size: 12px; padding: 7px 14px; }
+
+.board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+.cat-header {
+  background: #1a6fd4; color: #fff; text-align: center; font-size: 10px;
+  font-weight: 700; padding: 8px 4px; border-radius: 6px; text-transform: uppercase;
+  letter-spacing: 0.03em; line-height: 1.3;
+}
+.cell {
+  background: #1e3a8a; color: #facc15; text-align: center;
+  font-size: 18px; font-weight: 800; padding: 14px 4px; border-radius: 6px;
+  cursor: pointer; transition: background 0.15s, transform 0.1s;
+  min-height: 58px; display: flex; align-items: center; justify-content: center;
+}
+.cell:hover { background: #2563eb; transform: scale(1.03); }
+.cell.used { background: #1e293b; color: #475569; cursor: default; transform: none; }
+
+#qModal {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.88);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 999; padding: 16px;
+}
+#qModal.hidden { display: none; }
+.modal-box {
+  background: #0f172a; border: 2px solid #1d4ed8; border-radius: 14px;
+  max-width: 560px; width: 100%; padding: 24px; animation: pop 0.2s ease;
+}
+@keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.modal-cat { font-size: 11px; font-weight: 700; color: #60a5fa; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+.modal-pts { font-size: 22px; font-weight: 800; color: #facc15; margin-bottom: 14px; }
+.modal-q { font-size: 17px; color: #e2e8f0; font-weight: 600; margin-bottom: 20px; line-height: 1.5; }
+.options { display: flex; flex-direction: column; gap: 9px; }
+.opt-btn {
+  background: #1e293b; color: #e2e8f0; border: 1.5px solid #334155;
+  border-radius: 8px; padding: 11px 14px; font-size: 14px; cursor: pointer;
+  text-align: left; transition: background 0.1s, border-color 0.1s; font-weight: 500;
+}
+.opt-btn:hover:not(:disabled) { background: #1e3a8a; border-color: #60a5fa; }
+.opt-btn.correct { background: #14532d; border-color: #16a34a; color: #86efac; }
+.opt-btn.wrong { background: #450a0a; border-color: #dc2626; color: #fca5a5; }
+.opt-btn:disabled { cursor: default; }
+.feedback {
+  margin-top: 16px; padding: 12px 14px; border-radius: 8px; font-size: 13px;
+  color: #e2e8f0; line-height: 1.5;
+}
+.feedback.good { background: #14532d; border: 1px solid #16a34a; }
+.feedback.bad { background: #450a0a; border: 1px solid #dc2626; }
+.continue-btn { margin-top: 14px; width: 100%; }
+
+#endScreen {
+  text-align: center; padding: 2.5rem 1.5rem; background: #0f172a; border-radius: 12px;
+}
+#endScreen h2 { color: #facc15; font-size: 26px; margin-bottom: 8px; }
+.player-end-name { color: #93c5fd; font-size: 16px; margin-bottom: 20px; }
+.grade-showcase { background: #1e293b; border-radius: 12px; padding: 20px; max-width: 280px; margin: 0 auto 20px; }
+.grade-showcase .g-label { color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+.grade-showcase .g-score { color: #facc15; font-size: 48px; font-weight: 800; }
+.grade-showcase .g-pts { color: #60a5fa; font-size: 14px; margin-top: 4px; }
+.stats-row { display: flex; justify-content: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+.stat-card { background: #1e293b; border-radius: 8px; padding: 10px 18px; text-align: center; }
+.stat-card .s-label { color: #94a3b8; font-size: 11px; text-transform: uppercase; }
+.stat-card .s-val { font-size: 20px; font-weight: 700; }
+.motivational { color: #93c5fd; font-size: 14px; margin-bottom: 24px; font-style: italic; line-height: 1.5; }
+.screen { display: none; }
+.screen.active { display: block; }
+</style>
+</head>
+<body>
+<div id="app">
+
+<div id="startScreen" class="screen active">
+  <h1>¡Trivia!</h1>
+  <p class="subtitle">Química Orgánica — Grupos Funcionales</p>
+  <div class="player-input-wrap">
+    <label>Tu nombre</label>
+    <input id="playerName" type="text" placeholder="Escribe tu nombre" maxlength="28" />
+  </div>
+  <div class="error-msg" id="startErr"></div>
+  <button class="btn btn-primary" onclick="startGame()">Iniciar juego</button>
+</div>
+
+<div id="gameScreen" class="screen">
+  <div class="topbar">
+    <div class="player-info" id="playerLabel"></div>
+    <div class="score-box" id="scoreDisplay">0 pts</div>
+  </div>
+  <div class="ctrl-btns">
+    <button class="btn btn-danger" onclick="endGame()">Terminar juego</button>
+    <button class="btn btn-restart" onclick="restartGame()">Reiniciar</button>
+  </div>
+  <div class="board" id="board"></div>
+</div>
+
+<div id="endScreen" class="screen">
+  <h2>¡Juego terminado!</h2>
+  <p class="player-end-name" id="endPlayerName"></p>
+  <div class="grade-showcase">
+    <div class="g-label">Calificación</div>
+    <div class="g-score" id="endGrade"></div>
+    <div class="g-pts" id="endPts"></div>
+  </div>
+  <div class="stats-row" id="statsRow"></div>
+  <p class="motivational" id="motivMsg"></p>
+  <button class="btn btn-restart" onclick="restartGame()">Volver a jugar</button>
+</div>
+
+</div>
+
+<div id="qModal" class="hidden">
+  <div class="modal-box">
+    <div class="modal-cat" id="mCat"></div>
+    <div class="modal-pts" id="mPts"></div>
+    <div class="modal-q" id="mQ"></div>
+    <div class="options" id="mOpts"></div>
+    <div class="feedback hidden" id="mFeedback"></div>
+    <button class="btn btn-primary continue-btn hidden" id="mContinue" onclick="closeModal()">Continuar</button>
+  </div>
+</div>
+
+<script>
+const CATS = ["Alcoholes","Salud y alcohol","Efectos del alcohol","Cetonas","Ácidos carboxílicos"];
+const VALS = [100,200,300,400];
+
+const QS = [
+  [
+    {q:"¿Cuál es el grupo funcional característico de los alcoholes?",opts:["–COOH","–OH","C=O","–NH2"],a:1,exp:"Los alcoholes se identifican por el grupo hidroxilo (–OH) unido a un carbono."},
+    {q:"¿Cómo se llama el alcohol más sencillo, con un solo carbono y un grupo –OH?",opts:["Etanol","Isopropanol","Metanol","Glicerina"],a:2,exp:"El metanol (CH₃–OH) es el alcohol más sencillo con un grupo –OH unido a un solo carbono."},
+    {q:"¿En qué tipo de bebidas se encuentra el etanol (CH₃–CH₂–OH)?",opts:["Bebidas energéticas","Bebidas alcohólicas","Refrescos","Infusiones"],a:1,exp:"El etanol es el alcohol presente en bebidas alcohólicas como cerveza, vino y tequila."},
+    {q:"¿Cuál de estos alcoholes es TÓXICO para el ser humano si se ingiere?",opts:["Etanol","Isopropanol","Metanol","Glicerina"],a:2,exp:"El metanol es tóxico; ingerirlo puede causar daño grave o muerte, a diferencia del etanol."},
+  ],
+  [
+    {q:"¿Qué porcentaje de alcohol en sangre equivale al límite legal en México?",opts:["0.02%","0.08%","0.15%","0.40%"],a:1,exp:"El límite general en México es 0.08% de alcohol en sangre (aprox. 0.40 mg/L en aire espirado)."},
+    {q:"¿Qué significa la sigla BAC en el contexto del alcohol?",opts:["Blood Alcohol Concentration","Basic Alcohol Count","Body Absorption Control","Beer Alcohol Content"],a:0,exp:"BAC significa Blood Alcohol Concentration (Concentración de Alcohol en Sangre), expresada como porcentaje."},
+    {q:"¿Cuál es la concentración recomendada de alcohol en un gel antiséptico según el CDC?",opts:["30–50%","60–90%","100%","10–20%"],a:1,exp:"El CDC recomienda entre 60% y 90% de alcohol; normalmente se usa al 70% para mayor efectividad."},
+    {q:"El etanol e isopropanol funcionan como desinfectantes porque alteran la estructura de:",opts:["El ADN bacteriano","Las proteínas de bacterias y virus","Los lípidos de la piel","El pH del ambiente"],a:1,exp:"Funcionan como desinfectantes al alterar la forma de las proteínas de bacterias y virus, impidiendo su funcionamiento."},
+  ],
+  [
+    {q:"¿Qué hormona bloquea el alcohol, causando mayor eliminación de agua por los riñones?",opts:["Insulina","Cortisol","Hormona antidiurética (ADH)","Adrenalina"],a:2,exp:"El alcohol bloquea la ADH, haciendo que los riñones eliminen más agua y causando deshidratación."},
+    {q:"¿Cuál es el primer metabolito tóxico que produce el hígado al procesar el etanol?",opts:["Ácido acético","Acetona","Acetaldehído","Metanol"],a:2,exp:"El hígado usa la enzima alcohol deshidrogenasa y convierte el etanol en acetaldehído, que es MÁS tóxico que el alcohol original."},
+    {q:"El síndrome de Wernicke-Korsakoff, relacionado con el alcoholismo, es causado por deficiencia de:",opts:["Vitamina C","Vitamina D","Calcio","Vitamina B1 (tiamina)"],a:3,exp:"Este trastorno neurológico es causado por deficiencia de vitamina B1 (tiamina), frecuente en personas con alcoholismo."},
+    {q:"¿Cuál de estas condiciones es causada por el consumo excesivo de alcohol a largo plazo en el hígado?",opts:["Osteoporosis","Cirrosis hepática","Miocardiopatía","Síndrome de Wernicke"],a:1,exp:"La cirrosis hepática ocurre cuando el tejido sano del hígado se reemplaza por cicatrices a causa del exceso de alcohol."},
+  ],
+  [
+    {q:"¿Cuál es el grupo funcional de las cetonas?",opts:["–OH","–COOH","C=O (carbonilo)","–NH2"],a:2,exp:"El grupo funcional de las cetonas es el grupo carbonilo (C=O), donde el carbono está unido a dos carbonos más."},
+    {q:"¿Cuáles son los tres cuerpos cetónicos que produce el hígado?",opts:["Acetona, glucosa, insulina","Acetoacetato, beta-hidroxibutirato y acetona","Etanol, metanol y acetona","Glucosa, fructosa y cetona"],a:1,exp:"Los tres cuerpos cetónicos son: acetoacetato, beta-hidroxibutirato (el más abundante en sangre) y acetona (la menos abundante)."},
+    {q:"¿Cómo se llama el proceso por el que el cuerpo produce cuerpos cetónicos usando grasa como energía?",opts:["Glucólisis","Cetogénesis","Lipogénesis","Glicólisis"],a:1,exp:"La cetogénesis es el proceso metabólico en el que el hígado produce cuerpos cetónicos cuando no hay suficiente glucosa."},
+    {q:"La cetoacidosis es una condición peligrosa asociada principalmente a:",opts:["Ejercicio moderado","Dieta equilibrada","Diabetes no controlada","Consumo de frutas"],a:2,exp:"La cetoacidosis ocurre cuando las cetonas se acumulan en exceso y la sangre se vuelve demasiado ácida; suele ocurrir en diabetes no controlada."},
+  ],
+  [
+    {q:"¿Cuál es el grupo funcional de los ácidos carboxílicos?",opts:["–OH","C=O","–COOH","–NH2"],a:2,exp:"Los ácidos carboxílicos contienen el grupo funcional –COOH, que les da su carácter ácido y propiedades específicas."},
+    {q:"¿Qué ácido carboxílico común está presente en el vinagre?",opts:["Ácido cítrico","Ácido acético","Ácido benzoico","Ácido láctico"],a:1,exp:"El vinagre contiene ácido acético, un ácido carboxílico con olor fuerte característico."},
+    {q:"¿Cómo actúa el ibuprofeno para reducir el dolor?",opts:["Aumenta las prostaglandinas","Bloquea las enzimas COX-1 y COX-2","Estimula el sistema nervioso","Absorbe el calcio"],a:1,exp:"El ibuprofeno bloquea las enzimas COX-1 y COX-2, reduciendo la producción de prostaglandinas que causan dolor e inflamación."},
+    {q:"¿Qué efecto tienen los ácidos grasos Omega-3 sobre la inflamación crónica?",opts:["La aumentan significativamente","La provocan","Tienen efecto antiinflamatorio","No tienen ningún efecto"],a:2,exp:"Los Omega-3 tienen efecto antiinflamatorio, ayudando a disminuir la inflamación crónica, mientras que los Omega-6 en exceso pueden favorecerla."},
+  ]
+];
+
+const MAX_PTS = VALS.reduce((a,b)=>a+b,0) * CATS.length;
+let playerName = "", pts = 0, correct = 0, wrong = 0, used = [];
+let curCat = null, curValIdx = null, curVal = 0, curQ = null;
+
+function show(id) {
+  ["startScreen","gameScreen","endScreen"].forEach(s => {
+    const el = document.getElementById(s);
+    el.classList.remove("active");
+    el.style.display = "none";
+  });
+  const t = document.getElementById(id);
+  t.style.display = "block";
+  t.classList.add("active");
+}
+
+function startGame() {
+  const n = document.getElementById("playerName").value.trim();
+  const err = document.getElementById("startErr");
+  if (!n) { err.textContent = "Debes ingresar tu nombre para continuar"; return; }
+  err.textContent = "";
+  playerName = n; pts = 0; correct = 0; wrong = 0; used = [];
+  document.getElementById("playerLabel").textContent = playerName;
+  updateScore(); buildBoard();
+  show("gameScreen");
+}
+
+function updateScore() {
+  document.getElementById("scoreDisplay").textContent = pts + " pts";
+}
+
+function buildBoard() {
+  const board = document.getElementById("board");
+  board.innerHTML = "";
+  CATS.forEach(c => {
+    const h = document.createElement("div");
+    h.className = "cat-header";
+    h.textContent = c;
+    board.appendChild(h);
+  });
+  VALS.forEach((v, vi) => {
+    CATS.forEach((c, ci) => {
+      const isUsed = used.some(u => u[0]===ci && u[1]===vi);
+      const cell = document.createElement("div");
+      cell.className = "cell" + (isUsed ? " used" : "");
+      cell.textContent = isUsed ? "" : "$" + v;
+      if (!isUsed) cell.onclick = () => openQ(ci, vi, v);
+      board.appendChild(cell);
+    });
+  });
+}
+
+function openQ(ci, vi, v) {
+  if (used.some(u=>u[0]===ci&&u[1]===vi)) return;
+  curQ = QS[ci][vi]; curCat = ci; curValIdx = vi; curVal = v;
+  document.getElementById("mCat").textContent = CATS[ci];
+  document.getElementById("mPts").textContent = "$" + v;
+  document.getElementById("mQ").textContent = curQ.q;
+  const opts = document.getElementById("mOpts");
+  opts.innerHTML = "";
+  curQ.opts.forEach((o, oi) => {
+    const btn = document.createElement("button");
+    btn.className = "opt-btn";
+    btn.textContent = o;
+    btn.onclick = () => answer(oi, btn);
+    opts.appendChild(btn);
+  });
+  document.getElementById("mFeedback").className = "feedback hidden";
+  document.getElementById("mContinue").classList.add("hidden");
+  document.getElementById("qModal").classList.remove("hidden");
+}
+
+function answer(chosen, btn) {
+  document.querySelectorAll(".opt-btn").forEach(b => b.disabled = true);
+  const isCorrect = chosen === curQ.a;
+  document.querySelectorAll(".opt-btn")[curQ.a].classList.add("correct");
+  if (!isCorrect) btn.classList.add("wrong");
+  const fb = document.getElementById("mFeedback");
+  fb.className = "feedback " + (isCorrect ? "good" : "bad");
+  fb.innerHTML = (isCorrect ? "<strong>¡Correcto!</strong> " : "<strong>Incorrecto.</strong> ") + curQ.exp;
+  if (isCorrect) { pts += curVal; correct++; } else { wrong++; }
+  used.push([curCat, curValIdx]);
+  updateScore();
+  document.getElementById("mContinue").classList.remove("hidden");
+}
+
+function closeModal() {
+  document.getElementById("qModal").classList.add("hidden");
+  buildBoard();
+  if (used.length === 20) endGame();
+}
+
+function endGame() {
+  document.getElementById("qModal").classList.add("hidden");
+  const grade = Math.min(10, parseFloat(((pts / MAX_PTS) * 10).toFixed(1)));
+  document.getElementById("endPlayerName").textContent = playerName;
+  document.getElementById("endGrade").textContent = grade.toFixed(1);
+  document.getElementById("endPts").textContent = pts + " de " + MAX_PTS + " puntos posibles";
+  const sr = document.getElementById("statsRow");
+  sr.innerHTML = `
+    <div class="stat-card"><div class="s-label">Correctas</div><div class="s-val" style="color:#86efac">${correct}</div></div>
+    <div class="stat-card"><div class="s-label">Incorrectas</div><div class="s-val" style="color:#fca5a5">${wrong}</div></div>
+    <div class="stat-card"><div class="s-label">Respondidas</div><div class="s-val" style="color:#93c5fd">${used.length}</div></div>
+  `;
+  const msgs = [
+    [9,"¡Excelente dominio de los grupos funcionales! Eres todo un químico."],
+    [7,"¡Muy bien! Tienes una sólida comprensión de la química orgánica."],
+    [5,"Buen esfuerzo. Repasa los temas donde fallaste y lo lograrás."],
+    [0,"Sigue estudiando. ¡La química orgánica tiene mucho por descubrir!"]
+  ];
+  const msg = msgs.find(m => grade >= m[0]);
+  document.getElementById("motivMsg").textContent = msg[1];
+  show("endScreen");
+}
+
+function restartGame() {
+  document.getElementById("playerName").value = "";
+  document.getElementById("startErr").textContent = "";
+  show("startScreen");
+}
+</script>
+</body>
+</html>
